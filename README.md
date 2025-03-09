@@ -3,9 +3,10 @@
 # 🚀 欢迎登上OS大赛的星绽快车！
 
 你是否憧憬亲手打造一个既酷炫又安全的操作系统？是否想用Rust语言在系统编程的宇宙中留下自己的轨迹？欢迎选择基于星绽参加2025年的OS大赛，使用Rust语言在探索OS领域的星辰大海！
+
 ## 🌠 为什么选择星绽？
 
-[星绽](https://github.com/asterinas/asterinas)是一个与Linux兼容、但比Linux更安全可靠的OS内核。目前，星绽支持两个CPU体系架构（amd64和riscv64），实现了190个Linux系统调用，5个文件系统（包括Ext2和extFAT32），3种网络socket类型（包括TCP、UDP、Unix等），常用Virtio驱动，第一方代码（不包括依赖）合计超过10万行。
+[星绽](https://github.com/asterinas/asterinas)是一个与Linux兼容、但比Linux更安全可靠的OS内核。目前，星绽支持两个CPU体系架构（amd64和riscv64），实现了190个Linux系统调用，5个文件系统（包括Ext2和extFAT32），3种网络socket类型（包括TCP、UDP、Unix等），常用Virtio驱动，第一方代码（不包括依赖）合计超过10万行。项目的2024年度进展报告[见这里](https://asterinas.github.io/2025/01/20/asterinas-in-2024.html)。
 
 相比其他基于Rust语言的OS内核，星绽具有如下特色：
 
@@ -32,6 +33,8 @@
 （奖励规则后续会细化，奖品也可能会所有调整，最终解释权归星绽社区，敬请关注本仓库后续正式公告！）
 
 在克服了以上公共的基本要求之后，我们期待各位参赛同学自由选择感兴趣的、有挑战的OS功能和特性，把他们加到星绽中。祝大家赛出风格，赛出水平，有所收获，共同进步！
+
+如有任何问题，欢迎在本仓库上提Issue，或者加微信交流（姓名：蚂蚁集团 田洪亮，Github/微信ID: tatetian）。
 
 -----
 
