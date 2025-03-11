@@ -3,13 +3,8 @@
 .section .text.entry
 .globl _start
 _start:
-    # 1. Setup DMWIN
-    ori         $t0, $zero, 0x1     # CSR_DMW1_PLV0
-    lu52i.d     $t0, $t0, -2048     # UC, PLV0, 0x8000 xxxx xxxx xxxx
-    csrwr       $t0, 0x180          # LOONGARCH_CSR_DMWIN0
-    ori         $t0, $zero, 0x11    # CSR_DMW1_MAT | CSR_DMW1_PLV0
-    lu52i.d     $t0, $t0, -1792     # CA, PLV0, 0x9000 xxxx xxxx xxxx
-    csrwr       $t0, 0x181          # LOONGARCH_CSR_DMWIN1
+    # 1. Setup DMWIN, REMOVED
+    # probably unnecessary as we do not use DMWIN, we uses paging map
 
     # 2.0 Setup stack pointer(temporary value, used for calling setup_tlb)
     la.global   $sp, boot_stack_top
@@ -40,13 +35,7 @@ _start:
     csrwr       $t0, 0x19       # LOONGARCH_CSR_PGDL
     invtlb      0x00, $r0, $r0
 
-    # 6. Enable PG
-    li.w        $t0, 0xb0       # PLV=0, IE=0, PG=1
-    csrwr       $t0, 0x0        # LOONGARCH_CSR_CRMD
-    li.w        $t0, 0x00       # PLV=0, PIE=0, PWE=0
-    csrwr       $t0, 0x1        # LOONGARCH_CSR_PRMD
-    li.w        $t0, 0x00       # FPE=0, SXE=0, ASXE=0, BTE=0
-    csrwr       $t0, 0x2        # LOONGARCH_CSR_EUEN
+    # 6. Enable PG, TODO
 
     li.d        $t1, 0xffffffff00000000 # VIRT_ADDR_OFFSET
 
@@ -66,16 +55,7 @@ _start:
 .balign 4096
 .global handle_tlb_refill
 handle_tlb_refill:
-    csrwr   $t0, 0x8b               # LA_CSR_TLBRSAVE, KScratch for TLB refill exception
-    csrrd   $t0, 0x1b               # LA_CSR_PGD, Page table base
-    lddir   $t0, $t0, 3
-    lddir   $t0, $t0, 2
-    lddir   $t0, $t0, 1
-    ldpte   $t0, 0
-    ldpte   $t0, 1
-    tlbfill
-    csrrd   $t0, 0x8b               # LA_CSR_TLBRSAVE
-    ertn
+    # TODO
 
 .section .bss.stack
 
