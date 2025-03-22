@@ -6,13 +6,16 @@
 
 use alloc::vec::Vec;
 
-use self::{msix::CapabilityMsixData, vendor::CapabilityVndrData};
+#[cfg(target_arch = "x86_64")]
+use self::msix::CapabilityMsixData;
+use self::vendor::CapabilityVndrData;
 use super::{
     cfg_space::{PciDeviceCommonCfgOffset, Status},
     common_device::PciCommonDevice,
     PciDeviceLocation,
 };
 
+#[cfg(target_arch = "x86_64")]
 pub mod msix;
 pub mod vendor;
 
@@ -64,6 +67,7 @@ pub enum CapabilityData {
     Secdev,
     /// Id:0x10, PCI Express
     Exp,
+    #[cfg(target_arch = "x86_64")]
     /// Id:0x11, MSI-X
     Msix(CapabilityMsixData),
     /// Id:0x12, SATA Data/Index Conf
@@ -129,6 +133,7 @@ impl Capability {
                 0x0E => CapabilityData::Agp3,
                 0x0F => CapabilityData::Secdev,
                 0x10 => CapabilityData::Exp,
+                #[cfg(target_arch = "x86_64")]
                 0x11 => CapabilityData::Msix(CapabilityMsixData::new(dev, cap_ptr)),
                 0x12 => CapabilityData::Sata,
                 0x13 => CapabilityData::Af,
