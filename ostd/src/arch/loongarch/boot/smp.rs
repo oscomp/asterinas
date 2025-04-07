@@ -2,10 +2,12 @@
 
 //! Multiprocessor Boot Support
 
-pub(crate) fn get_num_processors() -> Option<u32> {
+use crate::{boot::smp::PerApRawInfo, mm::Paddr};
+
+pub(crate) fn count_processors() -> Option<u32> {
     Some(1)
 }
 
-pub(crate) fn bringup_all_aps() {
+pub(crate) fn bringup_all_aps(_info_ptr: *mut PerApRawInfo, _pt_ptr: Paddr, _num_cpus: u32) {
     // TODO
 }
