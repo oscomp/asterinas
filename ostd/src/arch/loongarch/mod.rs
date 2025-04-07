@@ -75,3 +75,12 @@ pub(crate) unsafe fn init_on_ap() {
 pub(crate) fn interrupts_ack(_irq_number: usize) {
     unimplemented!()
 }
+
+// No TDX for LoongArch
+#[macro_export]
+macro_rules! if_tdx_enabled {
+    ($if_block:block else $else_block:block) => {{
+        $else_block
+    }};
+    ($if_block:block) => {};
+}
