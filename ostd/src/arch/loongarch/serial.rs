@@ -24,6 +24,8 @@ pub fn register_console_input_callback(_f: &'static InputCallback) {
     todo!()
 }
 
+pub(crate) fn callback_init() {}
+
 struct Stdout;
 
 impl Write for Stdout {
