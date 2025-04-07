@@ -46,6 +46,13 @@ bitflags::bitflags! {
         const GLOBAL_OR_HUGE = 1 << 6;
         const PHYSICAL = 1 << 7;
         const WRITABLE = 1 << 8;
+
+        // FIXME: invesigate if these bits are avaliable for software use
+        // First bit ignored by MMU.
+        const RSV1 =            1 << 59;
+        // Second bit ignored by MMU.
+        const RSV2 =            1 << 60;
+
         // this bit only applies to huge pages, for basic pages, use GLOBAL_HUGE flag
         const GLOBAL = 1 << 12;
         const NO_READ = 1 << 61;
@@ -115,6 +122,7 @@ impl PodOnce for PageTableEntry {}
 
 impl PageTableEntry {
     const PHYS_ADDR_MASK: usize = 0x0000_ffff_ffff_f000;
+    const FLAGS_MASK: usize = 0xe000_0000_0000_01ff;
 
     fn new_paddr(paddr: Paddr) -> Self {
         Self(paddr & Self::PHYS_ADDR_MASK)
@@ -159,6 +167,8 @@ impl PageTableEntryTrait for PageTableEntry {
             | (parse_flags!(self.0, PageTableFlags::WRITABLE, PageFlags::W))
             | (parse_flags!(!self.0, PageTableFlags::NO_EXECUTE, PageFlags::X))
             | (parse_flags!(self.0, PageTableFlags::DIRTY, PageFlags::DIRTY))
+            | (parse_flags!(self.0, PageTableFlags::RSV1, PageFlags::AVAIL1))
+            | (parse_flags!(self.0, PageTableFlags::RSV2, PageFlags::AVAIL2))
             | PageFlags::ACCESSED.bits() as usize;
 
         let priv_flags = (
@@ -188,19 +198,20 @@ impl PageTableEntryTrait for PageTableEntry {
     }
 
     fn set_prop(&mut self, prop: PageProperty) {
-        // skips if the entry that points to a sub page table
-        if !self.is_present() || self.0 & (!Self::PHYS_ADDR_MASK) == 0 {
+        if !self.is_present() {
             // According to the interface of `PageTableEntryTrait`,
             // setting the property of a non-present entry is a no-op.
             return;
         }
 
-        let flags = PageTableFlags::VALID.bits()
+        let mut flags = PageTableFlags::VALID.bits()
             | PageTableFlags::PHYSICAL.bits()
             | PageTableFlags::DIRTY.bits()
             | parse_flags!(!prop.flags.bits(), PageFlags::R, PageTableFlags::NO_READ)
             | parse_flags!(prop.flags.bits(), PageFlags::W, PageTableFlags::WRITABLE)
             | parse_flags!(!prop.flags.bits(), PageFlags::X, PageTableFlags::NO_EXECUTE)
+            | parse_flags!(prop.flags.bits(), PageFlags::AVAIL1, PageTableFlags::RSV1)
+            | parse_flags!(prop.flags.bits(), PageFlags::AVAIL2, PageTableFlags::RSV2)
             | parse_flags!(
                 prop.priv_flags.bits(),
                 PrivFlags::USER,
@@ -217,6 +228,11 @@ impl PageTableEntryTrait for PageTableEntry {
                 PageTableFlags::GLOBAL_OR_HUGE
             );
         // TODO: handle global flag
+
+        // Allows RSV1 and RSV2 to be set
+        if self.0 & Self::FLAGS_MASK == 0 {
+            flags &= 0x1FFF_0000_0000_0000; // higher unused bits
+        }
 
         self.0 = self.0 & Self::PHYS_ADDR_MASK | flags;
     }
