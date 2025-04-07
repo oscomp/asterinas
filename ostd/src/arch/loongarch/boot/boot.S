@@ -125,6 +125,9 @@ _start:
     csrrd       $a0, 0x20       # cpuid
     li.d        $a1, 0x100000   # FDT_BASE
 
+.extern __cpu_local_start
+    la.global   $r21, __cpu_local_start
+
     # jump to loongarch_boot
     la.global   $t0, loongarch_boot
     or          $t0, $t0, $t1
