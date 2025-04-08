@@ -87,8 +87,8 @@ _start:
     st.d        $t0, $t1, 2040  # boot_pagetable_2nd[510] = phys(boot_pagetable_3nd)
 
     # Generate 3rd level page table
-    li.d        $t1, 0x80000000 | 0x1c3 # PVDWH
-    li.d        $t3, 0xc0000000
+    li.d        $t1, 0x80000000 | 0x4000000000001c3 # PVDWH | HUGE_MARKER
+    li.d        $t3, 0xc0000000 | 0x4000000000001c3
     li.d        $t4, 0x00200000 # increment by 2MB
 
 .loop_fill_3rd:

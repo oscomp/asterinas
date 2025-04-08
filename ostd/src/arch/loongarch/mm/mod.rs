@@ -42,19 +42,25 @@ bitflags::bitflags! {
         // 0b00 for strongly ordered uncached, 0b01 for coherent cached, 0b10 for weakly ordered uncached
         const MAT_LOW = 1 << 4;
         const MAT_HIGH = 1 << 5;
-        // this bit is global for basic pages and huge for huge pages
-        const GLOBAL_OR_HUGE = 1 << 6;
+        // this bit is global for basic pages and huge for huge pages, we also uses HUGE_MARKER to indicate
+        // if the page is huge.
+        const GLOBAL_COMMON = 1 << 6;
         const PHYSICAL = 1 << 7;
         const WRITABLE = 1 << 8;
 
-        // FIXME: invesigate if these bits are avaliable for software use
+        // this bit only applies to huge pages, for common pages, use GLOBAL_HUGE flag
+        const GLOBAL_HUGE = 1 << 12;
+
+        const HUGE = Self::GLOBAL_COMMON.bits() | Self::HUGE_MARKER.bits();
+
+        // According to the loongarch64 reference manual, [PALEN:60] is ignored by the MMU.
+        // This bit is ignored by MMU, we use it to indicate the page is huge.
+        const HUGE_MARKER = 1 << 58;
         // First bit ignored by MMU.
         const RSV1 =            1 << 59;
         // Second bit ignored by MMU.
         const RSV2 =            1 << 60;
 
-        // this bit only applies to huge pages, for basic pages, use GLOBAL_HUGE flag
-        const GLOBAL = 1 << 12;
         const NO_READ = 1 << 61;
         const NO_EXECUTE = 1 << 62;
         const RPLV = 1 << 63;
@@ -122,7 +128,7 @@ impl PodOnce for PageTableEntry {}
 
 impl PageTableEntry {
     const PHYS_ADDR_MASK: usize = 0x0000_ffff_ffff_f000;
-    const FLAGS_MASK: usize = 0xe000_0000_0000_01ff;
+    const FLAGS_MASK: usize = 0xe400_0000_0000_01ff;
 
     fn new_paddr(paddr: Paddr) -> Self {
         Self(paddr & Self::PHYS_ADDR_MASK)
@@ -132,9 +138,9 @@ impl PageTableEntry {
 impl PageTableEntryTrait for PageTableEntry {
     fn is_present(&self) -> bool {
         let paddr = self.paddr();
-        let flags = self.0 & (!Self::PHYS_ADDR_MASK);
+        let flags = self.0 & Self::FLAGS_MASK;
 
-        paddr != 0 && (flags == 0 || (flags & PageTableFlags::VALID.bits() != 0))
+        paddr != 0 && (flags == 0 || flags & PageTableFlags::VALID.bits() != 0)
     }
 
     fn new_page(
@@ -145,7 +151,7 @@ impl PageTableEntryTrait for PageTableEntry {
         let mut pte = Self::new_paddr(paddr);
 
         if level > 1 {
-            pte = Self(pte.0 | PageTableFlags::GLOBAL_OR_HUGE.bits());
+            pte = Self(pte.0 | PageTableFlags::HUGE.bits());
         }
 
         pte = Self(pte.0 | PageTableFlags::VALID.bits());
@@ -171,13 +177,17 @@ impl PageTableEntryTrait for PageTableEntry {
             | (parse_flags!(self.0, PageTableFlags::RSV2, PageFlags::AVAIL2))
             | PageFlags::ACCESSED.bits() as usize;
 
-        let priv_flags = (
-            // TODO: this only allows PLV3, the most common plv for user mode
-            (parse_flags!(self.0, PageTableFlags::PLV_LOW, PrivFlags::USER))
-                & (parse_flags!(self.0, PageTableFlags::PLV_HIGH, PrivFlags::USER))
-        ) | (parse_flags!(self.0, PageTableFlags::GLOBAL, PrivFlags::GLOBAL))
-            // TODO: this only appiles to basic pages
-            | (parse_flags!(self.0, PageTableFlags::GLOBAL_OR_HUGE, PrivFlags::GLOBAL));
+        // TODO: this only allows PLV3, the most common plv for user mode
+        let mut priv_flags = (parse_flags!(self.0, PageTableFlags::PLV_LOW, PrivFlags::USER))
+            & (parse_flags!(self.0, PageTableFlags::PLV_HIGH, PrivFlags::USER));
+
+        if self.0 & Self::FLAGS_MASK != 0 {
+            priv_flags |= if self.0 & PageTableFlags::HUGE_MARKER.bits() != 0 {
+                parse_flags!(self.0, PageTableFlags::GLOBAL_HUGE, PrivFlags::GLOBAL)
+            } else {
+                parse_flags!(self.0, PageTableFlags::GLOBAL_COMMON, PrivFlags::GLOBAL)
+            }
+        }
 
         let cache = if self.0 & PageTableFlags::MAT_LOW.bits() != 0 {
             // coherent cached
@@ -222,23 +232,30 @@ impl PageTableEntryTrait for PageTableEntry {
                 PrivFlags::USER,
                 PageTableFlags::PLV_HIGH
             )
-            | parse_flags!(
-                prop.priv_flags.bits(),
-                PrivFlags::GLOBAL,
-                PageTableFlags::GLOBAL_OR_HUGE
-            );
-        // TODO: handle global flag
+            | if self.0 & PageTableFlags::HUGE_MARKER.bits() != 0 {
+                parse_flags!(
+                    prop.priv_flags.bits(),
+                    PrivFlags::GLOBAL,
+                    PageTableFlags::GLOBAL_HUGE
+                ) | PageTableFlags::GLOBAL_COMMON.bits() // keep huge flag
+            } else {
+                parse_flags!(
+                    prop.priv_flags.bits(),
+                    PrivFlags::GLOBAL,
+                    PageTableFlags::GLOBAL_COMMON
+                )
+            };
 
         // Allows RSV1 and RSV2 to be set
         if self.0 & Self::FLAGS_MASK == 0 {
             flags &= 0x1FFF_0000_0000_0000; // higher unused bits
         }
 
-        self.0 = self.0 & Self::PHYS_ADDR_MASK | flags;
+        self.0 = (self.0 & (Self::PHYS_ADDR_MASK | PageTableFlags::HUGE_MARKER.bits())) | flags;
     }
 
     fn is_last(&self, level: PagingLevel) -> bool {
-        level == 1 || self.0 & PageTableFlags::GLOBAL_OR_HUGE.bits() != 0
+        level == 1 || self.0 & PageTableFlags::HUGE_MARKER.bits() != 0
     }
 }
 
