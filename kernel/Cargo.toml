@@ -70,5 +70,11 @@ all = ["cvm_guest"]
 
 cvm_guest = ["dep:tdx-guest", "ostd/cvm_guest"]
 
+# Specifying dependencies conditioned on features is not supported.
+# Please see https://github.com/rust-lang/cargo/issues/1197 for more details.
+[target.'cfg(target_arch = "x86_64")'.dependencies.aster-virtio]
+path = "comps/virtio"
+features = ["msix"]
+
 [lints]
 workspace = true
