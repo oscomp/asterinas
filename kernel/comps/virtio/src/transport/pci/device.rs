@@ -19,7 +19,9 @@ use ostd::{
     trap::IrqCallbackFunction,
 };
 
-use super::{common_cfg::VirtioPciCommonCfg, msix::VirtioMsixManager};
+use super::common_cfg::VirtioPciCommonCfg;
+#[cfg(feature = "msix")]
+use super::msix::VirtioMsixManager;
 use crate::{
     queue::{AvailRing, Descriptor, UsedRing},
     transport::{
@@ -58,6 +60,7 @@ pub struct VirtioPciModernTransport {
     common_cfg: SafePtr<VirtioPciCommonCfg, IoMem>,
     device_cfg: VirtioPciCapabilityData,
     notify: VirtioPciNotify,
+    #[cfg(feature = "msix")]
     msix_manager: VirtioMsixManager,
 }
 
@@ -214,6 +217,7 @@ impl VirtioTransport for VirtioPciModernTransport {
             .unwrap())
     }
 
+    #[cfg_attr(not(feature = "msix"), expect(unused_variable))]
     fn register_queue_callback(
         &mut self,
         index: u16,
@@ -223,6 +227,8 @@ impl VirtioTransport for VirtioPciModernTransport {
         if index >= self.num_queues() {
             return Err(VirtioTransportError::InvalidArgs);
         }
+
+        #[cfg(feature = "msix")]
         let (vector, irq) = if single_interrupt {
             if let Some(unused_irq) = self.msix_manager.pop_unused_irq() {
                 unused_irq
@@ -236,7 +242,10 @@ impl VirtioTransport for VirtioPciModernTransport {
         } else {
             self.msix_manager.shared_irq_line()
         };
+
+        #[cfg(feature = "msix")]
         irq.on_active(func);
+
         field_ptr!(&self.common_cfg, VirtioPciCommonCfg, queue_select)
             .write_once(&index)
             .unwrap();
@@ -246,18 +255,23 @@ impl VirtioTransport for VirtioPciModernTransport {
                 .unwrap(),
             index
         );
+        #[cfg(feature = "msix")]
         field_ptr!(&self.common_cfg, VirtioPciCommonCfg, queue_msix_vector)
             .write_once(&vector)
             .unwrap();
         Ok(())
     }
 
+    #[cfg_attr(not(feature = "msix"), expect(unused_variable))]
     fn register_cfg_callback(
         &mut self,
         func: Box<IrqCallbackFunction>,
     ) -> Result<(), VirtioTransportError> {
-        let (_, irq) = self.msix_manager.config_msix_irq();
-        irq.on_active(func);
+        #[cfg(feature = "msix")]
+        {
+            let (_, irq) = self.msix_manager.config_msix_irq();
+            irq.on_active(func);
+        }
         Ok(())
     }
 
@@ -288,6 +302,7 @@ impl VirtioPciModernTransport {
 
         info!("[Virtio]: Found device:{:?}", device_type);
 
+        #[cfg(feature = "msix")]
         let mut msix = None;
         let mut notify = None;
         let mut common_cfg = None;
@@ -314,6 +329,7 @@ impl VirtioPciModernTransport {
                         VirtioPciCpabilityType::PciCfg => {}
                     }
                 }
+                #[cfg(feature = "msix")]
                 CapabilityData::Msix(data) => {
                     msix = Some(data.clone());
                 }
@@ -325,18 +341,17 @@ impl VirtioPciModernTransport {
                 }
             }
         }
-        // TODO: Support interrupt without MSI-X
-        let msix = msix.unwrap();
         let notify = notify.unwrap();
         let common_cfg = common_cfg.unwrap();
         let device_cfg = device_cfg.unwrap();
-        let msix_manager = VirtioMsixManager::new(msix);
         Ok(Self {
             common_device,
             common_cfg,
             device_cfg,
             notify,
-            msix_manager,
+            #[cfg(feature = "msix")]
+            // TODO: Support interrupt without MSI-X
+            msix_manager: VirtioMsixManager::new(msix.unwrap()),
             device_type,
         })
     }
