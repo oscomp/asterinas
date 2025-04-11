@@ -23,6 +23,8 @@ log = "0.4"
 int-to-c-enum = { path = "../../libs/int-to-c-enum" }
 
 [features]
+default = ["msix"]
+
 msix = ["ostd/msix"]
 
 [lints]
