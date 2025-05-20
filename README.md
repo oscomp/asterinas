@@ -1,3 +1,4 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/oscomp/asrerinas)
 ✨亲爱的开发者小伙伴✨，欢迎来到2025年OS大赛特供版星绽仓库。
 
 # 🚀 欢迎登上OS大赛的星绽快车！
