@@ -1,4 +1,4 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/oscomp/asrerinas)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/oscomp/asterinas)
 
 ✨亲爱的开发者小伙伴✨，欢迎来到2025年OS大赛特供版星绽仓库。
 
