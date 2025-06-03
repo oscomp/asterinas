@@ -56,6 +56,10 @@ riscv = { version = "0.11.1", features = ["s-mode"] }
 sbi-rt = "0.0.3"
 fdt = { version = "0.1.5", features = ["pretty-printing"] }
 
+[target.loongarch64-unknown-none.dependencies]
+loongArch64 = "0.2.4"
+fdt = { version = "0.1.5", features = ["pretty-printing"] }
+
 [features]
 default = ["cvm_guest"]
 # The guest OS support for Confidential VMs (CVMs), e.g., Intel TDX
